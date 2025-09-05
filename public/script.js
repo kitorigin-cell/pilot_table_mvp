@@ -186,7 +186,7 @@ function switchTab(tabName) {
     if (tabName === 'users' && currentUser.role === 'admin') {
         loadUsers();
     } else if (tabName === 'stats' && (currentUser.role === 'admin' || currentUser.role === 'accountant')) {
-        loadStats();
+        loadStats(); // Теперь загружаем статистику
     }
 }
 
@@ -509,18 +509,264 @@ async function loadUsers() {
     }
 }
 
-function loadStats() {
-    console.log('Loading statistics...');
-    const statsView = document.getElementById('stats-view');
-    if (statsView) {
+// Функция загрузки статистики
+async function loadStats() {
+    try {
+        if (!['admin', 'accountant'].includes(currentUser.role)) {
+            return;
+        }
+
+        const statsView = document.getElementById('stats-view');
+        if (!statsView) return;
+
+        // Показываем заглушку пока грузятся данные
         statsView.innerHTML = `
             <div class="stats-container">
-                <h3>Статистика прибыли и затрат</h3>
-                <p>Здесь будут графики и аналитика</p>
-                <canvas id="profitChart" width="400" height="200"></canvas>
+                <h3><i class="fas fa-chart-line"></i> Статистика прибыли и затрат</h3>
+                <div class="loading">Загрузка данных...</div>
             </div>
         `;
+
+        // Получаем данные для статистики
+        const { data: stats, error } = await supabase
+            .from('flights')
+            .select('date, costs, profit, status')
+            .eq('status', 'completed')
+            .order('date', { ascending: true });
+
+        if (error) throw error;
+
+        if (!stats || stats.length === 0) {
+            statsView.innerHTML = `
+                <div class="stats-container">
+                    <h3><i class="fas fa-chart-line"></i> Статистика прибыли и затрат</h3>
+                    <p>Нет данных для отображения статистики</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Группируем данные по месяцам
+        const monthlyData = stats.reduce((acc, flight) => {
+            const date = new Date(flight.date);
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            const monthName = date.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+            
+            if (!acc[monthKey]) {
+                acc[monthKey] = {
+                    month: monthName,
+                    costs: 0,
+                    profit: 0,
+                    flights: 0
+                };
+            }
+            
+            acc[monthKey].costs += parseFloat(flight.costs) || 0;
+            acc[monthKey].profit += parseFloat(flight.profit) || 0;
+            acc[monthKey].flights += 1;
+            
+            return acc;
+        }, {});
+
+        const sortedData = Object.values(monthlyData).sort((a, b) => {
+            return new Date(a.month) - new Date(b.month);
+        });
+
+        // Общая статистика
+        const totalStats = {
+            totalFlights: stats.length,
+            totalCosts: stats.reduce((sum, f) => sum + (parseFloat(f.costs) || 0), 0),
+            totalProfit: stats.reduce((sum, f) => sum + (parseFloat(f.profit) || 0), 0),
+            avgProfitPerFlight: stats.length > 0 ? 
+                stats.reduce((sum, f) => sum + (parseFloat(f.profit) || 0), 0) / stats.length : 0
+        };
+
+        // Рендерим статистику
+        renderStats(sortedData, totalStats);
+
+    } catch (error) {
+        console.error('Ошибка загрузки статистики:', error);
+        const statsView = document.getElementById('stats-view');
+        if (statsView) {
+            statsView.innerHTML = `
+                <div class="stats-container">
+                    <h3><i class="fas fa-chart-line"></i> Статистика прибыли и затрат</h3>
+                    <p class="error">Ошибка загрузки статистики</p>
+                </div>
+            `;
+        }
     }
+}
+
+// Рендер статистики
+function renderStats(monthlyData, totalStats) {
+    const statsView = document.getElementById('stats-view');
+    if (!statsView) return;
+
+    statsView.innerHTML = `
+        <div class="stats-container">
+            <h3><i class="fas fa-chart-line"></i> Статистика прибыли и затрат</h3>
+            
+            <div class="stats-summary">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #e3f2fd;">
+                        <i class="fas fa-plane" style="color: #1976d2;"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-value">${totalStats.totalFlights}</div>
+                        <div class="stat-label">Всего рейсов</div>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #ffebee;">
+                        <i class="fas fa-money-bill-wave" style="color: #d32f2f;"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-value">${totalStats.totalCosts.toFixed(2)} ₽</div>
+                        <div class="stat-label">Общие затраты</div>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #e8f5e8;">
+                        <i class="fas fa-chart-line" style="color: #388e3c;"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-value">${totalStats.totalProfit.toFixed(2)} ₽</div>
+                        <div class="stat-label">Общая прибыль</div>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #fff3e0;">
+                        <i class="fas fa-percentage" style="color: #f57c00;"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-value">${totalStats.avgProfitPerFlight.toFixed(2)} ₽</div>
+                        <div class="stat-label">Прибыль на рейс</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="charts-row">
+                <div class="chart-container">
+                    <h4>Прибыль и затраты по месяцам</h4>
+                    <canvas id="profitCostsChart" width="400" height="300"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <h4>Рентабельность по месяцам</h4>
+                    <canvas id="profitabilityChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+
+            <div class="stats-table">
+                <h4>Детальная статистика по месяцам</h4>
+                <table class="stats-details">
+                    <thead>
+                        <tr>
+                            <th>Месяц</th>
+                            <th>Рейсов</th>
+                            <th>Затраты</th>
+                            <th>Прибыль</th>
+                            <th>Рентабельность</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${monthlyData.map(month => `
+                            <tr>
+                                <td>${month.month}</td>
+                                <td>${month.flights}</td>
+                                <td>${month.costs.toFixed(2)} ₽</td>
+                                <td>${month.profit.toFixed(2)} ₽</td>
+                                <td class="${month.profit - month.costs >= 0 ? 'positive' : 'negative'}">
+                                    ${month.costs > 0 ? ((month.profit - month.costs) / month.costs * 100).toFixed(1) : '0'}%
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+
+    // Инициализируем графики
+    initCharts(monthlyData);
+}
+
+// Инициализация графиков
+function initCharts(monthlyData) {
+    const months = monthlyData.map(m => m.month);
+    const costs = monthlyData.map(m => m.costs);
+    const profits = monthlyData.map(m => m.profit);
+    const profitability = monthlyData.map(m => m.costs > 0 ? ((m.profit - m.costs) / m.costs * 100) : 0);
+
+    // График прибыли и затрат
+    const profitCostsCtx = document.getElementById('profitCostsChart').getContext('2d');
+    new Chart(profitCostsCtx, {
+        type: 'bar',
+        data: {
+            labels: months,
+            datasets: [
+                {
+                    label: 'Затраты',
+                    data: costs,
+                    backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Прибыль',
+                    data: profits,
+                    backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Сумма (₽)'
+                    }
+                }
+            }
+        }
+    });
+
+    // График рентабельности
+    const profitabilityCtx = document.getElementById('profitabilityChart').getContext('2d');
+    new Chart(profitabilityCtx, {
+        type: 'line',
+        data: {
+            labels: months,
+            datasets: [{
+                label: 'Рентабельность (%)',
+                data: profitability,
+                backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                borderColor: 'rgba(153, 102, 255, 1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Рентабельность (%)'
+                    }
+                }
+            }
+        }
+    });
 }
 
 async function createFlight() {
