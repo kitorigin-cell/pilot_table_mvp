@@ -14,7 +14,7 @@ export default async function handler(req, res) {
       });
       const data = await r.json();
       if (data.error) {
-        return res.status(400).json({ error: data.error.message, details: data });
+        return res.status(400).json({ error: data.error.message, details: data, url: url, pat:PAT });
       }
       const flights = data.records.map(r => ({ id: r.id, ...r.fields }));
       return res.json(flights);
