@@ -487,6 +487,25 @@ async function createFlight() {
         }
 
         currentEditingFlightId = null;
+        
+        // Сбрасываем форму перед открытием
+        const form = document.getElementById('flight-form');
+        if (form) {
+            form.reset();
+        }
+        
+        // Устанавливаем значения по умолчанию
+        setElementValue('flight-date', new Date().toISOString().split('T')[0]);
+        setElementValue('flight-status', 'planned');
+        
+        // Скрываем поля затрат/прибыли для менеджера
+        if (currentUser.role === 'manager') {
+            const costProfitFields = document.querySelectorAll('.costs-profit');
+            costProfitFields.forEach(field => {
+                if (field) field.style.display = 'none';
+            });
+        }
+        
         openFlightModal();
         
     } catch (error) {
