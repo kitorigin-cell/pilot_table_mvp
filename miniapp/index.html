@@ -5,23 +5,28 @@
   <title>Таблица полётов</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    table { border-collapse: collapse; width: 100%; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
     th, td { border: 1px solid #ccc; padding: 5px; }
-    .modal { display: none; position: fixed; top: 20%; left: 20%; background: white; padding: 20px; border: 1px solid #000; }
+    .modal { display: none; position: fixed; top: 20%; left: 20%; background: white; padding: 20px; border: 1px solid #000; z-index: 10; }
     .status-btn { margin: 5px; padding: 5px 10px; }
+    button { cursor: pointer; }
   </style>
 </head>
 <body>
   <h2>Полёты</h2>
   <p id="role-info"></p>
+  <button id="add-flight-btn">Добавить новый полёт</button>
   <table id="flights"></table>
 
   <div id="modal" class="modal">
-    <h3>Редактирование</h3>
+    <h3>Редактирование / Новый полёт</h3>
     <form id="edit-form"></form>
     <button onclick="saveEdit()">Сохранить</button>
     <button onclick="closeModal()">Отмена</button>
   </div>
+
+  <h2>Пользователи (только для администратора)</h2>
+  <div id="users-section"></div>
 
   <script>
     const tg = window.Telegram.WebApp;
@@ -37,6 +42,7 @@
       currentRole = data.role;
       document.getElementById("role-info").innerText = "Ваша роль: " + data.role;
       loadFlights();
+      loadUsers(); 
     }
 
     async function loadFlights() {
@@ -66,30 +72,39 @@
       });
     }
 
+    document.getElementById("add-flight-btn").onclick = function() {
+      currentFlight = {
+        date: "",
+        route: "",
+        status: "Не назначен",
+        income: 0,
+        expense: 0,
+        pilot_comment: "",
+        manager_comment: ""
+      };
+      editFlight(currentFlight);
+    }
+
     function editFlight(flight){
       currentFlight = flight;
       const form = document.getElementById("edit-form");
       form.innerHTML = "";
 
       if(currentRole==="admin" || currentRole==="pilot") form.innerHTML += `<label>Комментарий пилота:</label><br><input id="pilot_comment" value="${flight.pilot_comment ?? ""}"><br>`;
-
       if(currentRole==="admin" || currentRole==="manager") {
         form.innerHTML += `<label>Комментарий менеджера:</label><br><input id="manager_comment" value="${flight.manager_comment ?? ""}"><br>`;
         if(currentRole==="admin") form.innerHTML += `<label>Статус:</label><br><input id="status" value="${flight.status}"><br>`;
       }
-
       if(currentRole==="pilot") {
         form.innerHTML += `<label>Статус:</label><br>
           <button type="button" class="status-btn" onclick="setStatus('Лечу ✅')">Лечу ✅</button>
           <button type="button" class="status-btn" onclick="setStatus('Не лечу ❌')">Не лечу ❌</button>
           <p>Текущий статус: <span id="current-status">${flight.status}</span></p>`;
       }
-
       if(currentRole==="admin" || currentRole==="accountant") {
         form.innerHTML += `<label>Доход:</label><br><input id="income" value="${flight.income ?? ""}"><br>
                            <label>Расход:</label><br><input id="expense" value="${flight.expense ?? ""}"><br>`;
       }
-
       document.getElementById("modal").style.display="block";
     }
 
@@ -104,17 +119,52 @@
       if(currentRole==="admin" || currentRole==="manager"){ body.manager_comment=document.getElementById("manager_comment")?.value; if(currentRole==="admin") body.status=document.getElementById("status")?.value; }
       if(currentRole==="admin" || currentRole==="accountant"){ body.income=parseFloat(document.getElementById("income")?.value||0); body.expense=parseFloat(document.getElementById("expense")?.value||0); }
 
-      await fetch(`/api/flights?id=${currentFlight.id}`,{
-        method:"PUT",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify(body)
-      });
+      if(!currentFlight.id) {
+        await fetch("/api/flights",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body) });
+      } else {
+        await fetch(`/api/flights?id=${currentFlight.id}`,{ method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body) });
+      }
 
       closeModal();
       loadFlights();
     }
 
     function closeModal(){ document.getElementById("modal").style.display="none"; }
+
+    // =================== Пользователи ===================
+    async function loadUsers() {
+      if(currentRole !== "admin") return;
+
+      const usersData = await fetch("/api/users.json").then(r => r.json());
+      const container = document.getElementById("users-section");
+      container.innerHTML = "<table><tr><th>Username</th><th>Роль</th><th>Действие</th></tr>";
+
+      usersData.forEach(u => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+              <td>${u.username}</td>
+              <td>
+                <select id="role-${u.tg_id}">
+                  <option value="pilot" ${u.role==="pilot"?"selected":""}>Pilot</option>
+                  <option value="manager" ${u.role==="manager"?"selected":""}>Manager</option>
+                  <option value="accountant" ${u.role==="accountant"?"selected":""}>Accountant</option>
+                  <option value="admin" ${u.role==="admin"?"selected":""}>Admin</option>
+                </select>
+              </td>
+              <td><button onclick="updateUserRole(${u.tg_id})">Сохранить</button></td>
+          `;
+          container.appendChild(row);
+      });
+    }
+
+    async function updateUserRole(tg_id) {
+      const select = document.getElementById(`role-${tg_id}`);
+      const newRole = select.value;
+
+      const res = await fetch("/api/update_role", { method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ tg_id, role: newRole }) });
+      if(res.ok) alert("Роль обновлена");
+      else alert("Ошибка обновления роли");
+    }
 
     loadRole();
   </script>

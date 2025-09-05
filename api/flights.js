@@ -6,9 +6,7 @@ const filePath = path.join(process.cwd(), "data", "flights.json");
 export default function handler(req, res) {
   const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
 
-  if (req.method === "GET") {
-    return res.status(200).json(data);
-  }
+  if (req.method === "GET") return res.status(200).json(data);
 
   if (req.method === "POST") {
     const newFlight = { id: Date.now(), ...req.body };
