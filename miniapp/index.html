@@ -1,187 +1,133 @@
-4️⃣ MiniApp (miniapp/index.html) с разграничением ролей и добавлением пользователей
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<title>Pilot Flights</title>
-<style>
-body { font-family: Arial; padding:20px; }
-table { border-collapse: collapse; width: 100%; margin-top:10px;}
-th,td{border:1px solid #ccc;padding:8px;text-align:left;}
-th{background:#f2f2f2;}
-button{padding:5px 10px;margin:2px;}
-#modal,#userModal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);}
-#modalContent,#userContent{background:white;margin:100px auto;padding:20px;width:400px;border-radius:8px;}
-</style>
+  <meta charset="UTF-8">
+  <title>Панель полётов</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/framer-motion/dist/framer-motion.umd.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/lucide-static@0.279.0/font/lucide.css" rel="stylesheet">
 </head>
-<body>
+<body class="bg-gradient-to-br from-sky-100 to-blue-200 min-h-screen flex flex-col items-center p-6">
 
-<h1>Таблица полётов</h1>
+  <!-- Заголовок -->
+  <header class="text-center mb-6">
+    <h1 class="text-4xl font-bold text-blue-800 flex items-center justify-center gap-3">
+      ✈️ Панель полётов
+    </h1>
+    <p class="text-gray-600 mt-2">Управление рейсами, ролями и пользователями</p>
+  </header>
 
-<label>Ваша роль: </label>
-<select id="roleFilter">
-  <option value="pilot">Пилот</option>
-  <option value="manager">Менеджер</option>
-  <option value="accountant">Бухгалтер</option>
-  <option value="admin">Админ</option>
-</select>
-
-<button id="addBtn">Добавить полёт</button>
-<button id="addUserBtn">Добавить пользователя</button>
-
-<table id="flights">
-  <thead><tr id="tableHeader"></tr></thead>
-  <tbody></tbody>
-</table>
-
-<!-- Модальное окно для полета -->
-<div id="modal">
-  <div id="modalContent">
-    <h3 id="modalTitle">Добавить полёт</h3>
-    <div id="modalBody"></div>
-    <button onclick="saveFlight()">Сохранить</button>
-    <button onclick="closeModal()">Отмена</button>
+  <!-- Панель управления -->
+  <div class="flex gap-4 mb-6">
+    <button onclick="openModal()" class="px-4 py-2 bg-blue-600 text-white rounded-xl shadow-md hover:bg-blue-700 transition flex items-center gap-2">
+      <i class="lucide-plus"></i> Добавить рейс
+    </button>
+    <button onclick="openUserModal()" class="px-4 py-2 bg-green-600 text-white rounded-xl shadow-md hover:bg-green-700 transition flex items-center gap-2">
+      <i class="lucide-user-plus"></i> Добавить пользователя
+    </button>
+    <select id="roleSelect" onchange="changeRole(this.value)" class="px-3 py-2 border rounded-lg shadow-sm">
+      <option value="pilot">Пилот</option>
+      <option value="manager">Менеджер</option>
+      <option value="accountant">Бухгалтер</option>
+      <option value="admin">Админ</option>
+    </select>
   </div>
-</div>
 
-<!-- Модальное окно для пользователя -->
-<div id="userModal">
-  <div id="userContent">
-    <h3>Добавить пользователя</h3>
-    <label>TG ID: <input type="text" id="tg_id"></label><br><br>
-    <label>Username: <input type="text" id="username"></label><br><br>
-    <label>Role:
-      <select id="role">
-        <option value="pilot">Пилот</option>
-        <option value="manager">Менеджер</option>
-        <option value="accountant">Бухгалтер</option>
-        <option value="admin">Админ</option>
-      </select>
-    </label><br><br>
-    <button onclick="saveUser()">Сохранить</button>
-    <button onclick="closeUserModal()">Отмена</button>
+  <!-- Таблица -->
+  <div class="overflow-x-auto w-full max-w-6xl shadow-lg rounded-2xl bg-white p-4">
+    <table class="w-full border-collapse">
+      <thead class="bg-blue-600 text-white">
+        <tr>
+          <th class="p-3 text-left">Дата</th>
+          <th class="p-3 text-left">Маршрут</th>
+          <th class="p-3 text-left">Статус</th>
+          <th class="p-3 text-left">Доход</th>
+          <th class="p-3 text-left">Расход</th>
+          <th class="p-3 text-left">Комментарий пилота</th>
+          <th class="p-3 text-left">Комментарий менеджера</th>
+          <th class="p-3 text-left">✏️</th>
+        </tr>
+      </thead>
+      <tbody id="flightsTable" class="divide-y divide-gray-200">
+        <!-- Строки будут добавлены JS -->
+      </tbody>
+    </table>
   </div>
-</div>
 
-<script>
-let flights=[];
-let editingId=null;
-let currentRole="pilot";
+  <!-- Модальное окно для рейсов -->
+  <div id="modal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center">
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-96 animate__animated animate__fadeIn">
+      <h2 class="text-xl font-semibold mb-4 flex items-center gap-2"><i class="lucide-plane"></i> Рейс</h2>
+      <form id="flightForm" class="flex flex-col gap-3">
+        <input id="date" placeholder="Дата (YYYY-MM-DD)" class="p-2 border rounded-lg"/>
+        <input id="route" placeholder="Маршрут" class="p-2 border rounded-lg"/>
+        <input id="status" placeholder="Статус" class="p-2 border rounded-lg"/>
+        <input id="income" placeholder="Доход" class="p-2 border rounded-lg"/>
+        <input id="expense" placeholder="Расход" class="p-2 border rounded-lg"/>
+        <textarea id="pilot_comment" placeholder="Комментарий пилота" class="p-2 border rounded-lg"></textarea>
+        <textarea id="manager_comment" placeholder="Комментарий менеджера" class="p-2 border rounded-lg"></textarea>
+        <div class="flex justify-end gap-2 mt-3">
+          <button type="button" onclick="closeModal()" class="px-3 py-2 bg-gray-300 rounded-lg">Отмена</button>
+          <button type="submit" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
-document.getElementById("roleFilter").addEventListener("change", e=>{
-  currentRole=e.target.value;
-  renderFlights();
-});
+  <!-- Модальное окно для пользователей -->
+  <div id="userModal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center">
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-96 animate__animated animate__fadeIn">
+      <h2 class="text-xl font-semibold mb-4 flex items-center gap-2"><i class="lucide-user"></i> Пользователь</h2>
+      <form id="userForm" class="flex flex-col gap-3">
+        <input id="tg_id" placeholder="Telegram ID" class="p-2 border rounded-lg"/>
+        <input id="username" placeholder="Имя пользователя" class="p-2 border rounded-lg"/>
+        <select id="role" class="p-2 border rounded-lg">
+          <option value="pilot">Пилот</option>
+          <option value="manager">Менеджер</option>
+          <option value="accountant">Бухгалтер</option>
+          <option value="admin">Админ</option>
+        </select>
+        <div class="flex justify-end gap-2 mt-3">
+          <button type="button" onclick="closeUserModal()" class="px-3 py-2 bg-gray-300 rounded-lg">Отмена</button>
+          <button type="submit" class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">Добавить</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
-document.getElementById("addBtn").addEventListener("click",()=>openModal());
-document.getElementById("addUserBtn").addEventListener("click",()=>openUserModal());
+  <script>
+    let currentRole = "pilot";
+    function changeRole(role) { currentRole = role; loadFlights(); }
+    function openModal() { document.getElementById("modal").classList.remove("hidden"); }
+    function closeModal() { document.getElementById("modal").classList.add("hidden"); }
+    function openUserModal() { document.getElementById("userModal").classList.remove("hidden"); }
+    function closeUserModal() { document.getElementById("userModal").classList.add("hidden"); }
 
-async function loadFlights(){
-  const res = await fetch("/api/flights");
-  flights = await res.json();
-  renderFlights();
-}
-
-function renderFlights(){
-  const tbody=document.querySelector("#flights tbody");
-  const header=document.getElementById("tableHeader");
-  tbody.innerHTML=""; header.innerHTML="";
-  const columns=[];
-  if(currentRole==="pilot") columns.push("Date","Route","Status","Pilot Comment","Actions");
-  if(currentRole==="manager") columns.push("Date","Route","Status","Income","Expense","Pilot Comment","Manager Comment","Actions");
-  if(currentRole==="accountant") columns.push("Date","Route","Status","Income","Expense");
-  if(currentRole==="admin") columns.push("Date","Route","Status","Income","Expense","Pilot Comment","Manager Comment","Actions");
-  columns.forEach(c=>{const th=document.createElement("th"); th.textContent=c; header.appendChild(th);});
-  flights.forEach(f=>{
-    const tr=document.createElement("tr");
-    if(currentRole==="pilot"){
-      tr.innerHTML=`<td>${f.date||""}</td><td>${f.route||""}</td><td>${f.status||""}</td><td>${f.pilot_comment||""}</td><td><button onclick="editFlight('${f.id}')">Отметить</button></td>`;
+    async function loadFlights() {
+      const res = await fetch("/api/flights");
+      const flights = await res.json();
+      const tbody = document.getElementById("flightsTable");
+      tbody.innerHTML = "";
+      flights.forEach(f => {
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-blue-50 transition";
+        tr.innerHTML = `
+          <td class="p-2">${f.date || ""}</td>
+          <td class="p-2">${f.route || ""}</td>
+          <td class="p-2">${f.status || ""}</td>
+          <td class="p-2">${f.income || ""}</td>
+          <td class="p-2">${f.expense || ""}</td>
+          <td class="p-2">${f.pilot_comment || ""}</td>
+          <td class="p-2">${f.manager_comment || ""}</td>
+          <td class="p-2">
+            <button class="text-blue-600 hover:text-blue-800"><i class="lucide-edit"></i></button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
     }
-    if(currentRole==="manager"){
-      tr.innerHTML=`<td>${f.date||""}</td><td>${f.route||""}</td><td>${f.status||""}</td><td>${f.income||""}</td><td>${f.expense||""}</td><td>${f.pilot_comment||""}</td><td>${f.manager_comment||""}</td><td><button onclick="editFlight('${f.id}')">Редактировать</button></td>`;
-    }
-    if(currentRole==="accountant"){
-      tr.innerHTML=`<td>${f.date||""}</td><td>${f.route||""}</td><td>${f.status||""}</td><td>${f.income||""}</td><td>${f.expense||""}</td>`;
-    }
-    if(currentRole==="admin"){
-      tr.innerHTML=`<td>${f.date||""}</td><td>${f.route||""}</td><td>${f.status||""}</td><td>${f.income||""}</td><td>${f.expense||""}</td><td>${f.pilot_comment||""}</td><td>${f.manager_comment||""}</td><td><button onclick="editFlight('${f.id}')">Редактировать</button></td>`;
-    }
-    tbody.appendChild(tr);
-  });
-}
 
-function openModal(){ editingId=null; document.getElementById("modalTitle").textContent="Добавить полёт"; buildModalFields({}); document.getElementById("modal").style.display="block"; }
-function closeModal(){ document.getElementById("modal").style.display="none"; }
-
-function editFlight(id){
-  editingId=id;
-  const f=flights.find(f=>f.id===id);
-  document.getElementById("modalTitle").textContent=currentRole==="pilot"?"Отметить полёт":"Редактировать полёт";
-  buildModalFields(f);
-  document.getElementById("modal").style.display="block";
-}
-
-function buildModalFields(f){
-  const body=document.getElementById("modalBody"); body.innerHTML="";
-  if(["manager","admin"].includes(currentRole)){
-    body.innerHTML=`<label>Date: <input type="date" id="date" value="${f.date||''}"></label><br><br>
-      <label>Route: <input type="text" id="route" value="${f.route||''}"></label><br><br>
-      <label>Status: <input type="text" id="status" value="${f.status||''}"></label><br><br>
-      <label>Income: <input type="number" id="income" value="${f.income||''}"></label><br><br>
-      <label>Expense: <input type="number" id="expense" value="${f.expense||''}"></label><br><br>
-      <label>Pilot Comment: <input type="text" id="pilot_comment" value="${f.pilot_comment||''}"></label><br><br>
-      <label>Manager Comment: <input type="text" id="manager_comment" value="${f.manager_comment||''}"></label><br><br>`;
-  } else if(currentRole==="pilot"){
-    body.innerHTML=`<p>Дата: ${f.date||''}</p><p>Маршрут: ${f.route||''}</p><p>Статус: ${f.status||''}</p>
-      <label>Ваш комментарий: <input type="text" id="pilot_comment" value="${f.pilot_comment||''}"></label><br><br>`;
-  } else if(currentRole==="accountant"){
-    body.innerHTML=`<label>Income: <input type="number" id="income" value="${f.income||''}"></label><br><br>
-      <label>Expense: <input type="number" id="expense" value="${f.expense||''}"></label><br><br>`;
-  }
-}
-
-async function saveFlight(){
-  const flight={};
-  if(["manager","admin"].includes(currentRole)){
-    flight.date=document.getElementById("date").value;
-    flight.route=document.getElementById("route").value;
-    flight.status=document.getElementById("status").value;
-    flight.income=document.getElementById("income").value;
-    flight.expense=document.getElementById("expense").value;
-    flight.pilot_comment=document.getElementById("pilot_comment").value;
-    flight.manager_comment=document.getElementById("manager_comment").value;
-  } else if(currentRole==="pilot"){
-    flight.pilot_comment=document.getElementById("pilot_comment").value;
-  } else if(currentRole==="accountant"){
-    flight.income=document.getElementById("income").value;
-    flight.expense=document.getElementById("expense").value;
-  }
-  if(editingId){
-    flight.id=editingId;
-    await fetch("/api/flights",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(flight)});
-  } else if(!["pilot","accountant"].includes(currentRole)){
-    await fetch("/api/flights",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(flight)});
-  }
-  closeModal();
-  await loadFlights();
-}
-
-// Пользователи
-function openUserModal(){ document.getElementById("userModal").style.display="block"; }
-function closeUserModal(){ document.getElementById("userModal").style.display="none"; }
-
-async function saveUser(){
-  const tg_id=document.getElementById("tg_id").value;
-  const username=document.getElementById("username").value;
-  const role=document.getElementById("role").value;
-  if(!tg_id || !username) return alert("Заполните все поля");
-  await fetch("/api/users",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({tg_id,username,role})});
-  closeUserModal();
-  alert("Пользователь добавлен");
-}
-
-loadFlights();
-</script>
-
+    loadFlights();
+  </script>
 </body>
 </html>
