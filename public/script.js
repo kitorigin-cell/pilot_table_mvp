@@ -57,8 +57,9 @@ async function initSupabase() {
     return new Promise((resolve) => {
         // Проверяем, загружена ли библиотека Supabase
         if (window.supabase) {
-            const SUPABASE_URL = 'https://your-project.supabase.co';
-            const SUPABASE_ANON_KEY = 'your-anon-key';
+            const SUPABASE_URL = 'https://zswbiikivjvuoolmufzd.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpzd2JpaWtpdmp2dW9vbG11ZnpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwODExMTYsImV4cCI6MjA3MjY1NzExNn0.tlJDNSTL-eK1NzMqdiZliHPbHMBgDZfddnhW78I9tyQ';
+    
             supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             console.log('Supabase initialized');
             resolve();
