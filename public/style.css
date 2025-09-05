@@ -257,3 +257,35 @@ button {
         overflow-x: auto;
     }
 }
+
+/* Добавьте эти стили если их нет */
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.users-table th,
+.users-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.users-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+}
+
+.users-table tr:hover {
+    background: #f8f9fa;
+}
+
+.users-table select {
+    padding: 0.25rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
