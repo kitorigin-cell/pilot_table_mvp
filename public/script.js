@@ -50,11 +50,19 @@ function canEditFlight(flight) {
     if (!currentUser) return false;
     
     switch (currentUser.role) {
-        case 'admin': return true;
-        case 'manager': return ['planned', 'cancelled'].includes(flight.status);
-        case 'pilot': return ['planned', 'in-progress'].includes(flight.status);
-        case 'accountant': return true;
-        default: return false;
+        case 'admin': 
+            return true;
+        case 'manager': 
+            return ['planned', 'cancelled'].includes(flight.status);
+        case 'pilot': 
+            // Пилот может редактировать только рейсы в статусе "запланирован" или "выполняется"
+            // и только свои комментарии и статус (на "выполняется" или "выполнен")
+            return ['planned', 'in-progress'].includes(flight.status);
+        case 'accountant': 
+            // Бухгалтер может редактировать только затраты и прибыль
+            return true;
+        default: 
+            return false;
     }
 }
 
@@ -71,21 +79,53 @@ function getElementValue(id) {
     return element ? element.value : '';
 }
 
-// Сохранение полета (ПЕРЕМЕЩАЕМ ВЫШЕ!)
 async function saveFlight(formData) {
     try {
-        const flightData = {
-            date: formData.get('date'),
-            route: formData.get('route'),
-            status: formData.get('status'),
-            manager_comment: formData.get('manager_comment'),
-            pilot_comment: formData.get('pilot_comment')
-        };
+        let flightData = {};
         
-        // Добавляем финансовые данные для соответствующих ролей
-        if (['admin', 'accountant'].includes(currentUser.role)) {
-            flightData.costs = parseFloat(formData.get('costs')) || 0;
-            flightData.profit = parseFloat(formData.get('profit')) || 0;
+        // В зависимости от роли пользователя разрешаем редактирование определенных полей
+        if (currentUser.role === 'admin') {
+            // Админ может редактировать все поля
+            flightData = {
+                date: formData.get('date'),
+                route: formData.get('route'),
+                status: formData.get('status'),
+                manager_comment: formData.get('manager_comment'),
+                pilot_comment: formData.get('pilot_comment'),
+                costs: parseFloat(formData.get('costs')) || 0,
+                profit: parseFloat(formData.get('profit')) || 0
+            };
+        } 
+        else if (currentUser.role === 'manager') {
+            // Менеджер не может редактировать затраты и прибыль
+            flightData = {
+                date: formData.get('date'),
+                route: formData.get('route'),
+                status: formData.get('status'),
+                manager_comment: formData.get('manager_comment'),
+                pilot_comment: formData.get('pilot_comment')
+            };
+        }
+        else if (currentUser.role === 'pilot') {
+            // Пилот может редактировать только статус и комментарий пилота
+            flightData = {
+                status: formData.get('status'),
+                pilot_comment: formData.get('pilot_comment')
+            };
+            
+            // Проверяем, что пилот не меняет статус на недопустимый
+            const newStatus = formData.get('status');
+            if (!['in-progress', 'completed'].includes(newStatus)) {
+                showError('Пилот может менять статус только на "Выполняется" или "Выполнен"');
+                return;
+            }
+        }
+        else if (currentUser.role === 'accountant') {
+            // Бухгалтер может редактировать только затраты и прибыль
+            flightData = {
+                costs: parseFloat(formData.get('costs')) || 0,
+                profit: parseFloat(formData.get('profit')) || 0
+            };
         }
         
         if (currentEditingFlightId) {
@@ -99,16 +139,25 @@ async function saveFlight(formData) {
             showSuccess('Рейс успешно обновлен');
         } else {
             // Создание нового полета
+            // Для создания нужны все обязательные поля
+            if (!flightData.date || !flightData.route) {
+                showError('Для создания рейса необходимо указать дату и маршрут');
+                return;
+            }
+            
             const { error } = await supabase
                 .from('flights')
-                .insert([flightData]);
+                .insert([{
+                    ...flightData,
+                    created_by: currentUser.id
+                }]);
             
             if (error) throw error;
             showSuccess('Рейс успешно создан');
         }
         
         closeFlightModal();
-        await loadFlights(); // Перезагружаем список
+        await loadFlights();
         
     } catch (error) {
         console.error('Ошибка сохранения полета:', error);
@@ -273,7 +322,9 @@ function renderFlightsTable(flights) {
     const table = document.createElement('table');
     table.className = 'flights-table';
     
-    // Заголовок таблицы
+    // Заголовок таблицы - для пилота скрываем столбцы затрат/прибыли
+    const showFinancials = !['manager', 'pilot'].includes(currentUser.role);
+    
     let tableHTML = `
         <thead>
             <tr>
@@ -281,8 +332,8 @@ function renderFlightsTable(flights) {
                 <th>Маршрут</th>
                 <th>Статус</th>
                 <th class="mobile-hidden">Коммент менеджера</th>
-                <th class="mobile-hidden">Коммент пилота</th>
-                ${currentUser.role !== 'manager' ? '<th>Затраты</th><th>Прибыль</th>' : ''}
+                <th>Коммент пилота</th>
+                ${showFinancials ? '<th>Затраты</th><th>Прибыль</th>' : ''}
                 <th>Действия</th>
             </tr>
         </thead>
@@ -302,8 +353,8 @@ function renderFlightsTable(flights) {
                     <span class="status-badge ${flight.status}">${statusIcon} ${getStatusText(flight.status)}</span>
                 </td>
                 <td class="mobile-hidden" data-label="Коммент менеджера">${escapeHtml(flight.manager_comment || '—')}</td>
-                <td class="mobile-hidden" data-label="Коммент пилота">${escapeHtml(flight.pilot_comment || '—')}</td>
-                ${currentUser.role !== 'manager' ? 
+                <td data-label="Коммент пилота">${escapeHtml(flight.pilot_comment || '—')}</td>
+                ${showFinancials ? 
                     `<td data-label="Затраты">${flight.costs ? flight.costs.toFixed(2) + ' ₽' : '0.00 ₽'}</td>
                      <td data-label="Прибыль">${flight.profit ? flight.profit.toFixed(2) + ' ₽' : '0.00 ₽'}</td>` : ''}
                 <td data-label="Действия">
@@ -496,7 +547,12 @@ async function loadFlights() {
             .select('*')
             .order('date', { ascending: false });
         
+        // Для менеджера скрываем затраты и прибыль
         if (currentUser.role === 'manager') {
+            query = query.select('id, date, route, manager_comment, pilot_comment, status, created_at');
+        }
+        // Для пилота скрываем затраты и прибыль
+        else if (currentUser.role === 'pilot') {
             query = query.select('id, date, route, manager_comment, pilot_comment, status, created_at');
         }
         
@@ -795,6 +851,7 @@ function initCharts(monthlyData) {
 
 async function createFlight() {
     try {
+        // Только менеджер и администратор могут создавать полеты
         if (!['admin', 'manager'].includes(currentUser.role)) {
             showError('Недостаточно прав для создания полетов');
             return;
@@ -818,6 +875,12 @@ async function createFlight() {
             costProfitFields.forEach(field => {
                 if (field) field.style.display = 'none';
             });
+        } else {
+            // Показываем для админа
+            const costProfitFields = document.querySelectorAll('.costs-profit');
+            costProfitFields.forEach(field => {
+                if (field) field.style.display = 'block';
+            });
         }
         
         openFlightModal();
@@ -840,6 +903,14 @@ window.editFlight = async function(flightId) {
         
         if (error) throw error;
         
+        // Проверяем права доступа для пилота
+        if (currentUser.role === 'pilot') {
+            if (!['planned', 'in-progress'].includes(flight.status)) {
+                showError('Вы можете редактировать только запланированные рейсы и рейсы в процессе выполнения');
+                return;
+            }
+        }
+        
         // Заполняем форму данными с проверками
         const setValue = (id, value) => {
             const element = document.getElementById(id);
@@ -853,7 +924,7 @@ window.editFlight = async function(flightId) {
         setValue('manager-comment', flight.manager_comment);
         setValue('pilot-comment', flight.pilot_comment);
         
-        // Показываем поля затрат/прибыли для соответствующих ролей
+        // Показываем поля затрат/прибыли только для админа и бухгалтера
         const costProfitFields = document.querySelectorAll('.costs-profit');
         costProfitFields.forEach(field => {
             if (field) {
@@ -875,10 +946,24 @@ window.editFlight = async function(flightId) {
                 if (!input) return;
                 
                 if (currentUser.role === 'pilot') {
-                    input.disabled = !(['pilot-comment', 'flight-status'].includes(input.id));
+                    // Пилот может редактировать только комментарий пилота и статус
+                    // Причем статус только на "in-progress" или "completed"
+                    if (input.id === 'flight-status') {
+                        input.disabled = false;
+                        // Ограничиваем выбор статусов для пилота
+                        Array.from(input.options).forEach(option => {
+                            option.disabled = !['in-progress', 'completed'].includes(option.value);
+                        });
+                    } else if (input.id === 'pilot-comment') {
+                        input.disabled = false;
+                    } else {
+                        input.disabled = true;
+                    }
                 } else if (currentUser.role === 'accountant') {
-                    input.disabled = !(['flight-costs', 'flight-profit'].includes(input.id));
+                    // Бухгалтер может редактировать только затраты и прибыль
+                    input.disabled = !['flight-costs', 'flight-profit'].includes(input.id);
                 } else if (currentUser.role === 'manager') {
+                    // Менеджер не может редактировать затраты и прибыль
                     input.disabled = ['flight-costs', 'flight-profit'].includes(input.id);
                 }
             });
