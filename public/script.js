@@ -253,7 +253,7 @@ function closeFlightModal() {
     }
 }
 
-// Рендер таблиц
+// Рендер таблицы полетов
 function renderFlightsTable(flights) {
     const container = document.getElementById('flights-table-container');
     if (!container) return;
@@ -263,20 +263,30 @@ function renderFlightsTable(flights) {
         return;
     }
     
+    // Добавляем индикатор прокрутки для мобильных
+    container.innerHTML = `
+        <div class="table-scroll-indicator">
+            <i class="fas fa-arrows-alt-h"></i> Прокрутите в сторону для просмотра всех данных
+        </div>
+    `;
+    
+    const table = document.createElement('table');
+    table.className = 'flights-table';
+    
+    // Заголовок таблицы
     let tableHTML = `
-        <table class="flights-table">
-            <thead>
-                <tr>
-                    <th>Дата</th>
-                    <th>Маршрут</th>
-                    <th>Статус</th>
-                    <th>Коммент менеджера</th>
-                    <th>Коммент пилота</th>
-                    ${currentUser.role !== 'manager' ? '<th>Затраты</th><th>Прибыль</th>' : ''}
-                    <th>Действия</th>
-                </tr>
-            </thead>
-            <tbody>
+        <thead>
+            <tr>
+                <th>Дата</th>
+                <th>Маршрут</th>
+                <th>Статус</th>
+                <th class="mobile-hidden">Коммент менеджера</th>
+                <th class="mobile-hidden">Коммент пилота</th>
+                ${currentUser.role !== 'manager' ? '<th>Затраты</th><th>Прибыль</th>' : ''}
+                <th>Действия</th>
+            </tr>
+        </thead>
+        <tbody>
     `;
     
     flights.forEach(flight => {
@@ -286,25 +296,29 @@ function renderFlightsTable(flights) {
         
         tableHTML += `
             <tr>
-                <td>${formattedDate}</td>
-                <td>${escapeHtml(flight.route)}</td>
-                <td><span class="status-badge ${flight.status}">${statusIcon} ${getStatusText(flight.status)}</span></td>
-                <td>${escapeHtml(flight.manager_comment || '')}</td>
-                <td>${escapeHtml(flight.pilot_comment || '')}</td>
+                <td data-label="Дата">${formattedDate}</td>
+                <td data-label="Маршрут">${escapeHtml(flight.route)}</td>
+                <td data-label="Статус">
+                    <span class="status-badge ${flight.status}">${statusIcon} ${getStatusText(flight.status)}</span>
+                </td>
+                <td class="mobile-hidden" data-label="Коммент менеджера">${escapeHtml(flight.manager_comment || '—')}</td>
+                <td class="mobile-hidden" data-label="Коммент пилота">${escapeHtml(flight.pilot_comment || '—')}</td>
                 ${currentUser.role !== 'manager' ? 
-                    `<td>${flight.costs ? flight.costs.toFixed(2) : '0.00'}</td>
-                     <td>${flight.profit ? flight.profit.toFixed(2) : '0.00'}</td>` : ''}
-                <td>
-                    ${canEdit ? `<button class="btn-edit" onclick="window.editFlight(${flight.id})">✏️</button>` : ''}
+                    `<td data-label="Затраты">${flight.costs ? flight.costs.toFixed(2) + ' ₽' : '0.00 ₽'}</td>
+                     <td data-label="Прибыль">${flight.profit ? flight.profit.toFixed(2) + ' ₽' : '0.00 ₽'}</td>` : ''}
+                <td data-label="Действия">
+                    ${canEdit ? `<button class="btn-edit" onclick="window.editFlight(${flight.id})">✏️</button>` : '—'}
                 </td>
             </tr>
         `;
     });
     
-    tableHTML += `</tbody></table>`;
-    container.innerHTML = tableHTML;
+    tableHTML += `</tbody>`;
+    table.innerHTML = tableHTML;
+    container.appendChild(table);
 }
 
+// Рендер таблицы пользователей
 function renderUsersTable(users) {
     const container = document.getElementById('users-table-container');
     if (!container) return;
@@ -314,27 +328,36 @@ function renderUsersTable(users) {
         return;
     }
     
+    // Добавляем индикатор прокрутки для мобильных
+    container.innerHTML = `
+        <div class="table-scroll-indicator">
+            <i class="fas fa-arrows-alt-h"></i> Прокрутите в сторону для просмотра всех данных
+        </div>
+    `;
+    
+    const table = document.createElement('table');
+    table.className = 'users-table';
+    
     let tableHTML = `
-        <table class="users-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Telegram ID</th>
-                    <th>Имя</th>
-                    <th>Роль</th>
-                    <th>Дата регистрации</th>
-                </tr>
-            </thead>
-            <tbody>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th class="mobile-hidden">Telegram ID</th>
+                <th>Имя</th>
+                <th>Роль</th>
+                <th>Дата регистрации</th>
+            </tr>
+        </thead>
+        <tbody>
     `;
     
     users.forEach(user => {
         tableHTML += `
             <tr>
-                <td>${user.id}</td>
-                <td>${user.tg_id}</td>
-                <td>${escapeHtml(user.name)}</td>
-                <td>
+                <td data-label="ID">${user.id}</td>
+                <td class="mobile-hidden" data-label="Telegram ID">${user.tg_id}</td>
+                <td data-label="Имя">${escapeHtml(user.name)}</td>
+                <td data-label="Роль">
                     <select onchange="window.updateUserRole(${user.id}, this.value)">
                         <option value="pilot" ${user.role === 'pilot' ? 'selected' : ''}>Пилот</option>
                         <option value="manager" ${user.role === 'manager' ? 'selected' : ''}>Менеджер</option>
@@ -342,13 +365,14 @@ function renderUsersTable(users) {
                         <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Администратор</option>
                     </select>
                 </td>
-                <td>${new Date(user.created_at).toLocaleDateString('ru-RU')}</td>
+                <td data-label="Дата регистрации">${new Date(user.created_at).toLocaleDateString('ru-RU')}</td>
             </tr>
         `;
     });
     
-    tableHTML += `</tbody></table>`;
-    container.innerHTML = tableHTML;
+    tableHTML += `</tbody>`;
+    table.innerHTML = tableHTML;
+    container.appendChild(table);
 }
 
 // Настройка обработчиков событий
@@ -906,6 +930,40 @@ async function exportToCSV() {
     }
 }
 
+// Функция для переключения между обычным и стековым видом таблиц
+function initTableViewToggle() {
+    if (window.innerWidth > 480) return;
+    
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'table-view-btn';
+    toggleBtn.innerHTML = '<i class="fas fa-table"></i> Переключить вид';
+    toggleBtn.onclick = toggleTableView;
+    
+    const toggleContainer = document.createElement('div');
+    toggleContainer.className = 'table-view-toggle';
+    toggleContainer.appendChild(toggleBtn);
+    
+    // Добавляем переключатель к таблицам
+    const tables = document.querySelectorAll('.flights-table-container, .users-table-container');
+    tables.forEach(container => {
+        container.parentNode.insertBefore(toggleContainer.cloneNode(true), container);
+    });
+}
+
+function toggleTableView(e) {
+    const btn = e.target.closest('.table-view-btn');
+    const tableContainer = btn.closest('div').nextElementSibling;
+    const table = tableContainer.querySelector('table');
+    
+    if (table.getAttribute('data-mobile-view') === 'stacked') {
+        table.removeAttribute('data-mobile-view');
+        btn.innerHTML = '<i class="fas fa-table"></i> Стекующий вид';
+    } else {
+        table.setAttribute('data-mobile-view', 'stacked');
+        btn.innerHTML = '<i class="fas fa-list"></i> Обычный вид';
+    }
+}
+
 window.updateUserRole = async function(userId, newRole) {
     try {
         if (currentUser.role !== 'admin') {
@@ -959,6 +1017,8 @@ async function initApp() {
         }
         
         setupEventListeners();
+        // Инициализация переключателя таблиц
+        initTableViewToggle();
         
     } catch (error) {
         console.error('Ошибка инициализации:', error);
