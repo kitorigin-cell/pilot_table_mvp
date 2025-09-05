@@ -7,6 +7,8 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === "GET") {
+      console.log("url to Airtable:", url);
+      console.log("Bearer to Airtable:", PAT);
       const r = await fetch(url, {
         headers: { Authorization: `Bearer ${PAT}` }
       });
