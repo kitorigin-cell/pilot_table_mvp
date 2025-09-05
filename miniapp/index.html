@@ -135,7 +135,7 @@
     async function loadUsers() {
       if(currentRole !== "admin") return;
 
-      const usersData = await fetch("/api/users.json").then(r => r.json());
+      const usersData = await fetch("/data/users.json").then(r => r.json());
       const container = document.getElementById("users-section");
       container.innerHTML = "<table><tr><th>Username</th><th>Роль</th><th>Действие</th></tr>";
 
