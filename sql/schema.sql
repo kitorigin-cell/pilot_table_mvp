@@ -1,4 +1,6 @@
--- SQL schema (users, flights, audit_log)
+-- Enable pgcrypto for gen_random_uuid()
+create extension if not exists pgcrypto;
+
 create table if not exists users (
   tg_id bigint primary key,
   full_name text,
