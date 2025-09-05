@@ -1,8 +1,22 @@
 {
-  "name": "pilot_table_mvp",
+  "name": "telegram-miniapp-supabase-vercel",
   "version": "1.0.0",
-  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
   "dependencies": {
-    "node-fetch": "^3.3.1"
+    "next": "13.4.12",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "dayjs": "^1.11.9",
+    "recharts": "^2.5.0",
+    "papaparse": "^5.4.1",
+    "react-datepicker": "^4.20.0",
+    "@supabase/supabase-js": "^2.39.1",
+    "tailwindcss": "^3.3.2",
+    "lucide-react": "^0.263.0"
   }
 }
