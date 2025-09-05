@@ -9,8 +9,8 @@ tg.expand();
 tg.enableClosingConfirmation();
 
 // Инициализация Supabase
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const SUPABASE_URL = 'https://zswbiikivjvuoolmufzd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpzd2JpaWtpdmp2dW9vbG11ZnpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwODExMTYsImV4cCI6MjA3MjY1NzExNn0.tlJDNSTL-eK1NzMqdiZliHPbHMBgDZfddnhW78I9tyQ';
 const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Основная функция инициализации
