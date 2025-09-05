@@ -76,56 +76,60 @@ export default async function handler(req, res) {
     }
 
     if (method === "PUT") {
-      const { id, ...updates } = body;
-      const { data: oldFlight } = await supabaseServer
+    const { id, ...rest } = body;
+
+    const { data: oldFlight } = await supabaseServer
         .from("flights")
         .select("*")
         .eq("id", id)
         .single();
 
-      if (!oldFlight) return res.status(404).json({ error: "Flight not found" });
+    if (!oldFlight) return res.status(404).json({ error: "Flight not found" });
 
-      // Проверка по ролям
-      if (user.role === "pilot") {
-        // Пилот может менять только свой комментарий и статус
+    let updates = { ...rest };
+
+    // Проверка по ролям
+    if (user.role === "pilot") {
+        // Пилот может менять только комментарий пилота и статус
         updates = {
-          pilot_comment: updates.pilot_comment ?? oldFlight.pilot_comment,
-          status: updates.status ?? oldFlight.status,
+        pilot_comment: rest.pilot_comment ?? oldFlight.pilot_comment,
+        status: rest.status ?? oldFlight.status,
         };
-      } else if (user.role === "manager") {
-        // Менеджер не видит costs/revenue
+    } else if (user.role === "manager") {
+        // Менеджер не редактирует costs/revenue
         delete updates.costs;
         delete updates.revenue;
-      } else if (user.role === "accountant") {
+    } else if (user.role === "accountant") {
         // Бухгалтер редактирует только costs/revenue
         updates = {
-          costs: updates.costs ?? oldFlight.costs,
-          revenue: updates.revenue ?? oldFlight.revenue,
+        costs: rest.costs ?? oldFlight.costs,
+        revenue: rest.revenue ?? oldFlight.revenue,
         };
-      }
-      // Admin может всё — без ограничений
+    }
+    // Admin может всё
 
-      const { data, error } = await supabaseServer
+    const { data, error } = await supabaseServer
         .from("flights")
         .update(updates)
         .eq("id", id)
         .select()
         .single();
 
-      if (error) throw error;
+    if (error) throw error;
 
-      await logAction(tg_id, "update_flight", { flight_id: id, updates });
+    await logAction(tg_id, "update_flight", { flight_id: id, updates });
 
-      // Push уведомления при смене статуса
-      if (updates.status && updates.status !== oldFlight.status) {
+    // Push уведомления при смене статуса
+    if (updates.status && updates.status !== oldFlight.status) {
         await sendMessage(
-          oldFlight.created_by,
-          `Статус полёта ${oldFlight.route} изменен на ${updates.status}`
+        oldFlight.created_by,
+        `Статус полёта ${oldFlight.route} изменен на ${updates.status}`
         );
-      }
-
-      return res.status(200).json(data);
     }
+
+    return res.status(200).json(data);
+    }
+
 
     res.setHeader("Allow", ["GET", "POST", "PUT"]);
     return res.status(405).end(`Method ${method} Not Allowed`);
