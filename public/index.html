@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Management System</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-plane"></i> Flight Management</h1>
+            <div id="user-info"></div>
+        </header>
+
+        <nav id="role-tabs"></nav>
+
+        <main>
+            <div id="flights-view">
+                <div class="filters">
+                    <input type="text" id="search-input" placeholder="Поиск по маршруту...">
+                    <select id="status-filter">
+                        <option value="">Все статусы</option>
+                        <option value="planned">Запланирован</option>
+                        <option value="cancelled">Отменен</option>
+                        <option value="in-progress">Выполняется</option>
+                        <option value="completed">Выполнен</option>
+                    </select>
+                    <button id="export-csv">Экспорт CSV</button>
+                </div>
+                <div id="flights-table-container"></div>
+            </div>
+
+            <div id="users-view" style="display:none;">
+                <div id="users-table-container"></div>
+            </div>
+
+            <div id="stats-view" style="display:none;">
+                <div class="chart-container">
+                    <canvas id="profitChart"></canvas>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Модальные окна -->
+    <div id="flight-modal" class="modal">
+        <!-- Содержимое модального окна для редактирования полета -->
+    </div>
+
+    <div id="user-modal" class="modal">
+        <!-- Содержимое модального окна для редактирования пользователя -->
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
