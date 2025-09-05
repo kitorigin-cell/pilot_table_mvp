@@ -16,12 +16,10 @@ function initSupabase() {
 }
 
 //const supabase = initSupabase();
-//let supabase = null;
+let supabase = null;
 // Основная функция инициализации
 async function initApp() {
     try {
-        // Инициализируем Supabase
-        //supabase = await initSupabase();
         // Получаем данные пользователя из Telegram
         const initData = tg.initDataUnsafe;
         const tgId = initData.user?.id;
@@ -33,6 +31,7 @@ async function initApp() {
         }
 
         // Проверяем/создаем пользователя в БД
+        supabase = await initSupabase();
         currentUser = await getOrCreateUser(tgId, userName);
         
         // Обновляем UI в соответствии с ролью
