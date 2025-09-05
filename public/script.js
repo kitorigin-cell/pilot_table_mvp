@@ -16,12 +16,12 @@ function initSupabase() {
 }
 
 //const supabase = initSupabase();
-let supabase = null;
+//let supabase = null;
 // Основная функция инициализации
 async function initApp() {
     try {
         // Инициализируем Supabase
-        supabase = await initSupabase();
+        //supabase = await initSupabase();
         // Получаем данные пользователя из Telegram
         const initData = tg.initDataUnsafe;
         const tgId = initData.user?.id;
