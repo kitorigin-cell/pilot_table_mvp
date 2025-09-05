@@ -49,7 +49,47 @@
 
     <!-- Модальные окна -->
     <div id="flight-modal" class="modal">
-        <!-- Содержимое модального окна для редактирования полета -->
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modal-title">Редактирование рейса</h2>
+            <form id="flight-form">
+                <input type="hidden" id="flight-id">
+                <div class="form-group">
+                    <label for="flight-date">Дата:</label>
+                    <input type="date" id="flight-date" name="date" required>
+                </div>
+                <div class="form-group">
+                    <label for="flight-route">Маршрут:</label>
+                    <input type="text" id="flight-route" name="route" required>
+                </div>
+                <div class="form-group">
+                    <label for="flight-status">Статус:</label>
+                    <select id="flight-status" name="status" required>
+                        <option value="planned">Запланирован</option>
+                        <option value="cancelled">Отменен</option>
+                        <option value="in-progress">Выполняется</option>
+                        <option value="completed">Выполнен</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="manager-comment">Комментарий менеджера:</label>
+                    <textarea id="manager-comment" name="manager_comment"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="pilot-comment">Комментарий пилота:</label>
+                    <textarea id="pilot-comment" name="pilot_comment"></textarea>
+                </div>
+                <div class="form-group costs-profit" style="display:none;">
+                    <label for="flight-costs">Затраты:</label>
+                    <input type="number" id="flight-costs" name="costs" step="0.01">
+                </div>
+                <div class="form-group costs-profit" style="display:none;">
+                    <label for="flight-profit">Прибыль:</label>
+                    <input type="number" id="flight-profit" name="profit" step="0.01">
+                </div>
+                <button type="submit" class="btn-primary">Сохранить</button>
+            </form>
+        </div>
     </div>
 
     <div id="user-modal" class="modal">

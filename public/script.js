@@ -6,6 +6,20 @@ let supabase = null;
 let currentEditingFlightId = null;
 
 // Вспомогательные функции (выносим в начало)
+
+// Вспомогательная функция для безопасной установки значений
+function setElementValue(id, value) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.value = value || '';
+    }
+}
+
+function getElementValue(id) {
+    const element = document.getElementById(id);
+    return element ? element.value : '';
+}
+
 function getStatusIcon(status) {
     const icons = {
         'planned': '📅', 'cancelled': '❌', 'in-progress': '✈️', 'completed': '✅'
@@ -152,17 +166,37 @@ function filterFlights(searchText, statusFilter) {
 // Управление модальным окном
 function openFlightModal() {
     const modal = document.getElementById('flight-modal');
-    if (modal) {
-        modal.style.display = 'block';
+    if (!modal) {
+        console.error('Modal not found');
+        return;
+    }
+    
+    modal.style.display = 'block';
+    
+    // Обновляем заголовок
+    const modalTitle = document.getElementById('modal-title');
+    if (modalTitle) {
+        modalTitle.textContent = currentEditingFlightId ? 'Редактирование рейса' : 'Создание рейса';
+    }
+    
+    // Устанавливаем текущую дату по умолчанию для нового полета
+    if (!currentEditingFlightId) {
+        const dateInput = document.getElementById('flight-date');
+        const statusSelect = document.getElementById('flight-status');
         
-        // Устанавливаем текущую дату по умолчанию для нового полета
-        if (!currentEditingFlightId) {
+        if (dateInput) {
             const today = new Date().toISOString().split('T')[0];
-            document.getElementById('flight-date').value = today;
-            document.getElementById('flight-status').value = 'planned';
-            
-            // Сбрасываем форму
-            document.getElementById('flight-form').reset();
+            dateInput.value = today;
+        }
+        
+        if (statusSelect) {
+            statusSelect.value = 'planned';
+        }
+        
+        // Сбрасываем форму
+        const form = document.getElementById('flight-form');
+        if (form) {
+            form.reset();
         }
     }
 }
@@ -281,13 +315,13 @@ function setupEventListeners() {
     
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
-            filterFlights(e.target.value, statusFilter.value);
+            filterFlights(e.target.value, statusFilter ? statusFilter.value : '');
         });
     }
     
     if (statusFilter) {
         statusFilter.addEventListener('change', (e) => {
-            filterFlights(searchInput.value, e.target.value);
+            filterFlights(searchInput ? searchInput.value : '', e.target.value);
         });
     }
     
@@ -318,6 +352,14 @@ function setupEventListeners() {
             await saveFlight(new FormData(flightForm));
         });
     }
+    
+    // Кнопка создания полета (добавляем динамически)
+    setTimeout(() => {
+        const createBtn = document.getElementById('create-flight');
+        if (createBtn) {
+            createBtn.addEventListener('click', createFlight);
+        }
+    }, 100);
 }
 
 // Основные функции приложения
@@ -465,21 +507,48 @@ window.editFlight = async function(flightId) {
         
         if (error) throw error;
         
-        document.getElementById('flight-id').value = flight.id;
-        document.getElementById('flight-date').value = flight.date;
-        document.getElementById('flight-route').value = flight.route;
-        document.getElementById('flight-status').value = flight.status;
-        document.getElementById('manager-comment').value = flight.manager_comment || '';
-        document.getElementById('pilot-comment').value = flight.pilot_comment || '';
+        // Заполняем форму данными с проверками
+        const setValue = (id, value) => {
+            const element = document.getElementById(id);
+            if (element) element.value = value || '';
+        };
         
+        setValue('flight-id', flight.id);
+        setValue('flight-date', flight.date);
+        setValue('flight-route', flight.route);
+        setValue('flight-status', flight.status);
+        setValue('manager-comment', flight.manager_comment);
+        setValue('pilot-comment', flight.pilot_comment);
+        
+        // Показываем поля затрат/прибыли для соответствующих ролей
         const costProfitFields = document.querySelectorAll('.costs-profit');
         costProfitFields.forEach(field => {
-            field.style.display = ['admin', 'accountant'].includes(currentUser.role) ? 'block' : 'none';
+            if (field) {
+                field.style.display = ['admin', 'accountant'].includes(currentUser.role) ? 'block' : 'none';
+            }
         });
         
         if (['admin', 'accountant'].includes(currentUser.role)) {
-            document.getElementById('flight-costs').value = flight.costs || '';
-            document.getElementById('flight-profit').value = flight.profit || '';
+            setValue('flight-costs', flight.costs);
+            setValue('flight-profit', flight.profit);
+        }
+        
+        // Блокируем поля в зависимости от роли
+        const form = document.getElementById('flight-form');
+        if (form) {
+            const inputs = form.querySelectorAll('input, select, textarea');
+            
+            inputs.forEach(input => {
+                if (!input) return;
+                
+                if (currentUser.role === 'pilot') {
+                    input.disabled = !(['pilot-comment', 'flight-status'].includes(input.id));
+                } else if (currentUser.role === 'accountant') {
+                    input.disabled = !(['flight-costs', 'flight-profit'].includes(input.id));
+                } else if (currentUser.role === 'manager') {
+                    input.disabled = ['flight-costs', 'flight-profit'].includes(input.id);
+                }
+            });
         }
         
         openFlightModal();
@@ -489,47 +558,6 @@ window.editFlight = async function(flightId) {
         showError('Не удалось загрузить данные полета');
     }
 };
-
-async function saveFlight(formData) {
-    try {
-        const flightData = {
-            date: formData.get('date'),
-            route: formData.get('route'),
-            status: formData.get('status'),
-            manager_comment: formData.get('manager_comment'),
-            pilot_comment: formData.get('pilot_comment')
-        };
-        
-        if (['admin', 'accountant'].includes(currentUser.role)) {
-            flightData.costs = parseFloat(formData.get('costs')) || 0;
-            flightData.profit = parseFloat(formData.get('profit')) || 0;
-        }
-        
-        if (currentEditingFlightId) {
-            const { error } = await supabase
-                .from('flights')
-                .update(flightData)
-                .eq('id', currentEditingFlightId);
-            
-            if (error) throw error;
-            showSuccess('Рейс успешно обновлен');
-        } else {
-            const { error } = await supabase
-                .from('flights')
-                .insert([flightData]);
-            
-            if (error) throw error;
-            showSuccess('Рейс успешно создан');
-        }
-        
-        closeFlightModal();
-        await loadFlights();
-        
-    } catch (error) {
-        console.error('Ошибка сохранения полета:', error);
-        showError('Ошибка при сохранении рейса');
-    }
-}
 
 async function exportToCSV() {
     try {
