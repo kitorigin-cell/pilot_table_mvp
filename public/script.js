@@ -40,7 +40,7 @@ async function initApp() {
         await loadFlights();
         
         if (currentUser.role === 'admin') {
-            await loadUsers();
+            await loadUsers(); // Теперь функция определена
         }
         
         // Добавляем обработчики событий
@@ -159,9 +159,99 @@ async function loadFlights() {
     }
 }
 
+// Загрузка пользователей (для администратора)
+async function loadUsers() {
+    try {
+        console.log('Loading users...');
+        
+        if (currentUser.role !== 'admin') {
+            console.log('Access denied: only admin can load users');
+            return;
+        }
+        
+        const { data, error } = await supabase
+            .from('users')
+            .select('id, tg_id, name, role, created_at')
+            .order('created_at', { ascending: false });
+        
+        if (error) {
+            console.error('Supabase error:', error);
+            throw error;
+        }
+        
+        allUsers = data || [];
+        console.log('Users loaded:', allUsers.length);
+        renderUsersTable(allUsers);
+        
+    } catch (error) {
+        console.error('Ошибка загрузки пользователей:', error);
+        showError('Не удалось загрузить данные пользователей');
+    }
+}
+
+// Рендер таблицы пользователей
+function renderUsersTable(users) {
+    const container = document.getElementById('users-table-container');
+    
+    if (!container) {
+        console.error('Users table container not found');
+        return;
+    }
+    
+    if (!users || users.length === 0) {
+        container.innerHTML = '<p>Нет данных о пользователях</p>';
+        return;
+    }
+    
+    let tableHTML = `
+        <table class="users-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Telegram ID</th>
+                    <th>Имя</th>
+                    <th>Роль</th>
+                    <th>Дата регистрации</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    users.forEach(user => {
+        tableHTML += `
+            <tr>
+                <td>${user.id}</td>
+                <td>${user.tg_id}</td>
+                <td>${escapeHtml(user.name)}</td>
+                <td>
+                    <select onchange="window.updateUserRole(${user.id}, this.value)" ${currentUser.role !== 'admin' ? 'disabled' : ''}>
+                        <option value="pilot" ${user.role === 'pilot' ? 'selected' : ''}>Пилот</option>
+                        <option value="manager" ${user.role === 'manager' ? 'selected' : ''}>Менеджер</option>
+                        <option value="accountant" ${user.role === 'accountant' ? 'selected' : ''}>Бухгалтер</option>
+                        <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Администратор</option>
+                    </select>
+                </td>
+                <td>${new Date(user.created_at).toLocaleDateString('ru-RU')}</td>
+                <td>
+                    ${currentUser.role === 'admin' ? `<button class="btn-edit" onclick="window.editUser(${user.id})">✏️</button>` : ''}
+                </td>
+            </tr>
+        `;
+    });
+    
+    tableHTML += `</tbody></table>`;
+    container.innerHTML = tableHTML;
+}
+
 // Рендер таблицы полетов
 function renderFlightsTable(flights) {
     const container = document.getElementById('flights-table-container');
+    
+    if (!container) {
+        console.error('Flights table container not found');
+        return;
+    }
     
     if (!flights || flights.length === 0) {
         container.innerHTML = '<p>Нет данных о полетах</p>';
@@ -378,6 +468,29 @@ function switchTab(tabName) {
     if (activeBtn) {
         activeBtn.classList.add('active');
     }
+    
+    // Загружаем данные для вкладки если нужно
+    if (tabName === 'users' && currentUser.role === 'admin') {
+        loadUsers();
+    } else if (tabName === 'stats' && (currentUser.role === 'admin' || currentUser.role === 'accountant')) {
+        loadStats();
+    }
+}
+
+// Функция загрузки статистики
+async function loadStats() {
+    console.log('Loading statistics...');
+    // Заглушка для статистики
+    const statsView = document.getElementById('stats-view');
+    if (statsView) {
+        statsView.innerHTML = `
+            <div class="stats-container">
+                <h3>Статистика прибыли и затрат</h3>
+                <p>Здесь будут графики и аналитика</p>
+                <canvas id="profitChart" width="400" height="200"></canvas>
+            </div>
+        `;
+    }
 }
 
 // Глобальные функции для использования в HTML
@@ -385,6 +498,12 @@ window.editFlight = function(flightId) {
     console.log('Edit flight:', flightId);
     // Реализация редактирования полета
     alert('Редактирование полета ' + flightId);
+};
+
+window.editUser = function(userId) {
+    console.log('Edit user:', userId);
+    // Реализация редактирования пользователя
+    alert('Редактирование пользователя ' + userId);
 };
 
 window.updateUserRole = async function(userId, newRole) {
@@ -402,6 +521,9 @@ window.updateUserRole = async function(userId, newRole) {
         if (error) throw error;
         
         showError('Роль пользователя успешно обновлена');
+        
+        // Обновляем таблицу пользователей
+        await loadUsers();
         
     } catch (error) {
         console.error('Ошибка обновления роли:', error);
