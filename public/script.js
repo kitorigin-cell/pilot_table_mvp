@@ -15,11 +15,13 @@ function initSupabase() {
     return supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
-const supabase = initSupabase();
-
+//const supabase = initSupabase();
+let supabase = null;
 // Основная функция инициализации
 async function initApp() {
     try {
+        // Инициализируем Supabase
+        supabase = await initSupabase();
         // Получаем данные пользователя из Telegram
         const initData = tg.initDataUnsafe;
         const tgId = initData.user?.id;
