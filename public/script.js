@@ -114,6 +114,50 @@ async function getOrCreateUser(tgId, userName) {
     }
 }
 
+// Обновление UI в соответствии с ролью
+async function updateUIForRole(role) {
+    const userInfoEl = document.getElementById('user-info');
+    if (userInfoEl && currentUser) {
+        userInfoEl.innerHTML = `${currentUser.name} (${getRoleText(role)})`;
+    }
+    
+    const tabsContainer = document.getElementById('role-tabs');
+    if (!tabsContainer) return;
+    
+    let tabsHTML = `<button class="tab-btn active" data-tab="flights">Рейсы</button>`;
+    
+    if (role === 'admin') {
+        tabsHTML += `<button class="tab-btn" data-tab="users">Пользователи</button>`;
+        tabsHTML += `<button class="tab-btn" data-tab="stats">Статистика</button>`;
+    } else if (role === 'accountant') {
+        tabsHTML += `<button class="tab-btn" data-tab="stats">Статистика</button>`;
+    }
+    
+    tabsContainer.innerHTML = tabsHTML;
+    
+    // Добавляем обработчики для вкладок
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            switchTab(btn.dataset.tab);
+        });
+    });
+    
+    // Добавляем кнопку создания для менеджеров и администраторов
+    if (role === 'manager' || role === 'admin') {
+        const flightsView = document.getElementById('flights-view');
+        const filters = flightsView.querySelector('.filters');
+        
+        if (filters && !document.getElementById('create-flight')) {
+            const createButton = document.createElement('button');
+            createButton.id = 'create-flight';
+            createButton.className = 'btn-primary';
+            createButton.innerHTML = '<i class="fas fa-plus"></i> Создать рейс';
+            createButton.onclick = createFlight;
+            filters.appendChild(createButton);
+        }
+    }
+}
+
 // Загрузка полетов
 async function loadFlights() {
     try {
