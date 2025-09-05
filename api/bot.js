@@ -4,7 +4,8 @@ export default async function handler(req, res) {
 
     // Обработка команды /start
     if (message?.text === '/start') {
-      const webAppUrl = `https://${process.env.VERCEL_URL}`
+      //const webAppUrl = `https://${process.env.VERCEL_URL}`
+      const webAppUrl = 'https://pilot-table-mvp.vercel.app/'
       
       try {
         // Отправляем сообщение с кнопкой открытия Mini App
