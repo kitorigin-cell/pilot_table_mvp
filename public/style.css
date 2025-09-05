@@ -674,3 +674,237 @@ button {
 .table-view-btn:hover {
     background: #5a6268;
 }
+
+/* Стили для адаптивных таблиц с фиксированной прокруткой */
+.flights-table-container,
+.users-table-container,
+.stats-table {
+    width: 100%;
+    overflow-x: auto;
+    margin: 1rem 0;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Контейнер для таблицы с минимальной шириной */
+.table-wrapper {
+    min-width: 600px;
+    width: 100%;
+}
+
+.flights-table,
+.users-table,
+.stats-details {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+}
+
+.flights-table th,
+.flights-table td,
+.users-table th,
+.users-table td,
+.stats-details th,
+.stats-details td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+    white-space: nowrap;
+}
+
+.flights-table th,
+.users-table th,
+.stats-details th {
+    background: #f8f9fa;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 1px 0 #ddd;
+}
+
+/* Индикатор прокрутки */
+.table-scroll-indicator {
+    display: none;
+    text-align: center;
+    padding: 0.5rem;
+    color: #6c757d;
+    font-size: 0.875rem;
+    background: linear-gradient(90deg, #f8f9fa, #e9ecef, #f8f9fa);
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.7; }
+    50% { opacity: 1; }
+    100% { opacity: 0.7; }
+}
+
+@media (max-width: 768px) {
+    .table-scroll-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+    
+    .flights-table-container,
+    .users-table-container,
+    .stats-table {
+        border: 2px solid #007bff;
+        position: relative;
+    }
+    
+    .flights-table-container::after,
+    .users-table-container::after {
+        content: '→';
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #007bff;
+        font-size: 1.5rem;
+        font-weight: bold;
+        animation: bounce 1s infinite;
+    }
+    
+    @keyframes bounce {
+        0%, 100% { transform: translateY(-50%) translateX(0); }
+        50% { transform: translateY(-50%) translateX(5px); }
+    }
+}
+
+/* Переключатель вида таблиц */
+.table-view-toggle {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 1rem;
+    gap: 1rem;
+}
+
+.table-view-btn {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background 0.3s;
+}
+
+.table-view-btn:hover {
+    background: #0056b3;
+}
+
+.table-view-btn.active {
+    background: #28a745;
+}
+
+/* Адаптивные стили */
+@media (max-width: 768px) {
+    .flights-table,
+    .users-table,
+    .stats-details {
+        font-size: 0.875rem;
+    }
+    
+    .flights-table th,
+    .flights-table td,
+    .users-table th,
+    .users-table td,
+    .stats-details th,
+    .stats-details td {
+        padding: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .table-wrapper {
+        min-width: 100%;
+    }
+    
+    .flights-table th,
+    .flights-table td,
+    .users-table th,
+    .users-table td {
+        padding: 0.4rem;
+        font-size: 0.8rem;
+    }
+    
+    .mobile-hidden {
+        display: none !important;
+    }
+}
+
+/* Стили для стекового вида таблиц */
+.flights-table[data-mobile-view="stacked"],
+.users-table[data-mobile-view="stacked"] {
+    min-width: 100% !important;
+}
+
+.flights-table[data-mobile-view="stacked"] thead,
+.users-table[data-mobile-view="stacked"] thead {
+    display: none;
+}
+
+.flights-table[data-mobile-view="stacked"] tr,
+.users-table[data-mobile-view="stacked"] tr {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 1rem;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.flights-table[data-mobile-view="stacked"] td,
+.users-table[data-mobile-view="stacked"] td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0.5rem;
+    border: none;
+    border-bottom: 1px solid #eee;
+}
+
+.flights-table[data-mobile-view="stacked"] td:last-child,
+.users-table[data-mobile-view="stacked"] td:last-child {
+    border-bottom: none;
+}
+
+.flights-table[data-mobile-view="stacked"] td::before,
+.users-table[data-mobile-view="stacked"] td::before {
+    content: attr(data-label);
+    font-weight: bold;
+    margin-right: 1rem;
+    color: #6c757d;
+    min-width: 120px;
+    font-size: 0.9rem;
+}
+
+.flights-table[data-mobile-view="stacked"] .status-badge,
+.users-table[data-mobile-view="stacked"] .status-badge {
+    margin-left: auto;
+    min-width: auto;
+}
+
+.flights-table[data-mobile-view="stacked"] .btn-edit,
+.users-table[data-mobile-view="stacked"] .btn-edit {
+    margin-left: auto;
+}
+
+/* Скрываем переключатель в стековом режиме */
+.flights-table[data-mobile-view="stacked"] ~ .table-view-toggle,
+.users-table[data-mobile-view="stacked"] ~ .table-view-toggle {
+    display: none;
+}

@@ -307,17 +307,44 @@ function renderFlightsTable(flights) {
     const container = document.getElementById('flights-table-container');
     if (!container) return;
     
+    container.innerHTML = ''; // Очищаем контейнер
+    
     if (!flights.length) {
-        container.innerHTML = '<p>Нет данных о полетах</p>';
+        container.innerHTML = '<p class="no-data">Нет данных о полетах</p>';
         return;
     }
     
     // Добавляем индикатор прокрутки для мобильных
-    container.innerHTML = `
-        <div class="table-scroll-indicator">
-            <i class="fas fa-arrows-alt-h"></i> Прокрутите в сторону для просмотра всех данных
-        </div>
-    `;
+    if (window.innerWidth <= 768) {
+        const indicator = document.createElement('div');
+        indicator.className = 'table-scroll-indicator';
+        indicator.innerHTML = '<i class="fas fa-arrows-alt-h"></i> Прокрутите в сторону для просмотра всех данных';
+        container.appendChild(indicator);
+    }
+    
+    // Добавляем переключатель вида для мобильных
+    if (window.innerWidth <= 480) {
+        const toggleContainer = document.createElement('div');
+        toggleContainer.className = 'table-view-toggle';
+        
+        const normalViewBtn = document.createElement('button');
+        normalViewBtn.className = 'table-view-btn active';
+        normalViewBtn.innerHTML = '<i class="fas fa-table"></i> Обычный вид';
+        normalViewBtn.onclick = () => toggleTableView('normal', container);
+        
+        const stackedViewBtn = document.createElement('button');
+        stackedViewBtn.className = 'table-view-btn';
+        stackedViewBtn.innerHTML = '<i class="fas fa-list"></i> Стекующий вид';
+        stackedViewBtn.onclick = () => toggleTableView('stacked', container);
+        
+        toggleContainer.appendChild(normalViewBtn);
+        toggleContainer.appendChild(stackedViewBtn);
+        container.appendChild(toggleContainer);
+    }
+    
+    // Создаем обертку для таблицы
+    const tableWrapper = document.createElement('div');
+    tableWrapper.className = 'table-wrapper';
     
     const table = document.createElement('table');
     table.className = 'flights-table';
@@ -366,7 +393,8 @@ function renderFlightsTable(flights) {
     
     tableHTML += `</tbody>`;
     table.innerHTML = tableHTML;
-    container.appendChild(table);
+    tableWrapper.appendChild(table);
+    container.appendChild(tableWrapper);
 }
 
 // Рендер таблицы пользователей
@@ -374,17 +402,24 @@ function renderUsersTable(users) {
     const container = document.getElementById('users-table-container');
     if (!container) return;
     
+    container.innerHTML = ''; // Очищаем контейнер
+    
     if (!users.length) {
-        container.innerHTML = '<p>Нет данных о пользователях</p>';
+        container.innerHTML = '<p class="no-data">Нет данных о пользователях</p>';
         return;
     }
     
     // Добавляем индикатор прокрутки для мобильных
-    container.innerHTML = `
-        <div class="table-scroll-indicator">
-            <i class="fas fa-arrows-alt-h"></i> Прокрутите в сторону для просмотра всех данных
-        </div>
-    `;
+    if (window.innerWidth <= 768) {
+        const indicator = document.createElement('div');
+        indicator.className = 'table-scroll-indicator';
+        indicator.innerHTML = '<i class="fas fa-arrows-alt-h"></i> Прокрутите в сторону для просмотра всех данных';
+        container.appendChild(indicator);
+    }
+    
+    // Создаем обертку для таблицы
+    const tableWrapper = document.createElement('div');
+    tableWrapper.className = 'table-wrapper';
     
     const table = document.createElement('table');
     table.className = 'users-table';
@@ -423,7 +458,8 @@ function renderUsersTable(users) {
     
     tableHTML += `</tbody>`;
     table.innerHTML = tableHTML;
-    container.appendChild(table);
+    tableWrapper.appendChild(table);
+    container.appendChild(tableWrapper);
 }
 
 // Настройка обработчиков событий
@@ -1035,19 +1071,22 @@ function initTableViewToggle() {
     });
 }
 
-function toggleTableView(e) {
-    const btn = e.target.closest('.table-view-btn');
-    const tableContainer = btn.closest('div').nextElementSibling;
-    const table = tableContainer.querySelector('table');
+// Функция переключения вида таблицы
+function toggleTableView(viewType, container) {
+    const table = container.querySelector('table');
+    const buttons = container.querySelectorAll('.table-view-btn');
     
-    if (table.getAttribute('data-mobile-view') === 'stacked') {
-        table.removeAttribute('data-mobile-view');
-        btn.innerHTML = '<i class="fas fa-table"></i> Стекующий вид';
-    } else {
+    buttons.forEach(btn => btn.classList.remove('active'));
+    
+    if (viewType === 'stacked') {
         table.setAttribute('data-mobile-view', 'stacked');
-        btn.innerHTML = '<i class="fas fa-list"></i> Обычный вид';
+        container.querySelector('.table-view-btn:nth-child(2)').classList.add('active');
+    } else {
+        table.removeAttribute('data-mobile-view');
+        container.querySelector('.table-view-btn:nth-child(1)').classList.add('active');
     }
 }
+
 
 window.updateUserRole = async function(userId, newRole) {
     try {
@@ -1117,5 +1156,15 @@ window.addEventListener('DOMContentLoaded', function() {
         initApp();
     } else {
         window.addEventListener('load', initApp);
+    }
+});
+
+// Добавьте обработчик ресайза окна
+window.addEventListener('resize', function() {
+    if (currentUser && allFlights.length > 0) {
+        renderFlightsTable(allFlights);
+    }
+    if (currentUser && currentUser.role === 'admin' && allUsers.length > 0) {
+        renderUsersTable(allUsers);
     }
 });
