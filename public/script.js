@@ -6,20 +6,6 @@ let supabase = null;
 let currentEditingFlightId = null;
 
 // Вспомогательные функции (выносим в начало)
-
-// Вспомогательная функция для безопасной установки значений
-function setElementValue(id, value) {
-    const element = document.getElementById(id);
-    if (element) {
-        element.value = value || '';
-    }
-}
-
-function getElementValue(id) {
-    const element = document.getElementById(id);
-    return element ? element.value : '';
-}
-
 function getStatusIcon(status) {
     const icons = {
         'planned': '📅', 'cancelled': '❌', 'in-progress': '✈️', 'completed': '✅'
@@ -69,6 +55,64 @@ function canEditFlight(flight) {
         case 'pilot': return ['planned', 'in-progress'].includes(flight.status);
         case 'accountant': return true;
         default: return false;
+    }
+}
+
+// Вспомогательная функция для безопасной установки значений
+function setElementValue(id, value) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.value = value || '';
+    }
+}
+
+function getElementValue(id) {
+    const element = document.getElementById(id);
+    return element ? element.value : '';
+}
+
+// Сохранение полета (ПЕРЕМЕЩАЕМ ВЫШЕ!)
+async function saveFlight(formData) {
+    try {
+        const flightData = {
+            date: formData.get('date'),
+            route: formData.get('route'),
+            status: formData.get('status'),
+            manager_comment: formData.get('manager_comment'),
+            pilot_comment: formData.get('pilot_comment')
+        };
+        
+        // Добавляем финансовые данные для соответствующих ролей
+        if (['admin', 'accountant'].includes(currentUser.role)) {
+            flightData.costs = parseFloat(formData.get('costs')) || 0;
+            flightData.profit = parseFloat(formData.get('profit')) || 0;
+        }
+        
+        if (currentEditingFlightId) {
+            // Обновление существующего полета
+            const { error } = await supabase
+                .from('flights')
+                .update(flightData)
+                .eq('id', currentEditingFlightId);
+            
+            if (error) throw error;
+            showSuccess('Рейс успешно обновлен');
+        } else {
+            // Создание нового полета
+            const { error } = await supabase
+                .from('flights')
+                .insert([flightData]);
+            
+            if (error) throw error;
+            showSuccess('Рейс успешно создан');
+        }
+        
+        closeFlightModal();
+        await loadFlights(); // Перезагружаем список
+        
+    } catch (error) {
+        console.error('Ошибка сохранения полета:', error);
+        showError('Ошибка при сохранении рейса');
     }
 }
 
