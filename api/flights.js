@@ -11,6 +11,9 @@ export default async function handler(req, res) {
         headers: { Authorization: `Bearer ${PAT}` }
       });
       const data = await r.json();
+      if (data.error) {
+        return res.status(400).json({ error: data.error.message, details: data });
+      }
       const flights = data.records.map(r => ({ id: r.id, ...r.fields }));
       return res.json(flights);
     }
@@ -20,7 +23,7 @@ export default async function handler(req, res) {
 
       // Проверяем обязательные поля
       if (!body.date || !body.route) {
-        return res.status(400).json({ error: "Fields 'date' and 'route' are required" });
+        return res.status(400).json({ error: "Fields 'date' and 'route' are required", body });
       }
 
       // Приводим числа к Number
@@ -42,7 +45,7 @@ export default async function handler(req, res) {
       console.log("Airtable response:", data);
 
       if (data.error) {
-        return res.status(400).json({ error: data.error.message });
+        return res.status(400).json({ error: data.error.message, airtableResponse: data });
       }
 
       return res.status(201).json({ ok: true, id: data.records[0].id });
@@ -70,15 +73,15 @@ export default async function handler(req, res) {
       console.log("Airtable response:", data);
 
       if (data.error) {
-        return res.status(400).json({ error: data.error.message });
+        return res.status(400).json({ error: data.error.message, airtableResponse: data });
       }
 
       return res.json({ ok: true, data });
     }
 
-    res.status(405).end(); // Метод не поддерживается
+    res.status(405).json({ error: "Method not allowed" });
   } catch (e) {
     console.error("Server error:", e);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: e.message, stack: e.stack });
   }
 }
