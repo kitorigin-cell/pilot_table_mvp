@@ -322,26 +322,6 @@ function renderFlightsTable(flights) {
         container.appendChild(indicator);
     }
     
-    // Добавляем переключатель вида для мобильных
-    if (window.innerWidth <= 480) {
-        const toggleContainer = document.createElement('div');
-        toggleContainer.className = 'table-view-toggle';
-        
-        const normalViewBtn = document.createElement('button');
-        normalViewBtn.className = 'table-view-btn active';
-        normalViewBtn.innerHTML = '<i class="fas fa-table"></i> Обычный вид';
-        normalViewBtn.onclick = () => toggleTableView('normal', container);
-        
-        const stackedViewBtn = document.createElement('button');
-        stackedViewBtn.className = 'table-view-btn';
-        stackedViewBtn.innerHTML = '<i class="fas fa-list"></i> Стекующий вид';
-        stackedViewBtn.onclick = () => toggleTableView('stacked', container);
-        
-        toggleContainer.appendChild(normalViewBtn);
-        toggleContainer.appendChild(stackedViewBtn);
-        container.appendChild(toggleContainer);
-    }
-    
     // Создаем обертку для таблицы
     const tableWrapper = document.createElement('div');
     tableWrapper.className = 'table-wrapper';
@@ -1159,12 +1139,13 @@ window.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Добавьте обработчик ресайза окна
+
 window.addEventListener('resize', function() {
-    if (currentUser && allFlights.length > 0) {
+    // Перерисовываем таблицы при изменении размера окна
+    if (allFlights.length > 0) {
         renderFlightsTable(allFlights);
     }
-    if (currentUser && currentUser.role === 'admin' && allUsers.length > 0) {
+    if (allUsers.length > 0) {
         renderUsersTable(allUsers);
     }
 });

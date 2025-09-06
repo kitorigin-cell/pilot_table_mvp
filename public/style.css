@@ -657,3 +657,110 @@ button {
 .stat-card:nth-child(2) { animation-delay: 0.2s; }
 .stat-card:nth-child(3) { animation-delay: 0.3s; }
 .stat-card:nth-child(4) { animation-delay: 0.4s; }
+
+
+/* Стили для таблиц - ИСПРАВЛЕННАЯ ВЕРСИЯ */
+.flights-table-container,
+.users-table-container {
+    width: 100%;
+    margin: 1rem 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Обертка для таблицы внутри контейнера */
+.table-wrapper {
+    min-width: 100%;
+    width: max-content;
+}
+
+.flights-table,
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+}
+
+.flights-table th,
+.flights-table td,
+.users-table th,
+.users-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+    white-space: nowrap;
+}
+
+.flights-table th,
+.users-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* Убедитесь что эти стили есть */
+.flights-table-container::-webkit-scrollbar,
+.users-table-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.flights-table-container::-webkit-scrollbar-track,
+.users-table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.flights-table-container::-webkit-scrollbar-thumb,
+.users-table-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.flights-table-container::-webkit-scrollbar-thumb:hover,
+.users-table-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Для Firefox */
+.flights-table-container,
+.users-table-container {
+    scrollbar-width: thin;
+    scrollbar-color: #c1c1c1 #f1f1f1;
+}
+
+@media (max-width: 768px) {
+    .flights-table-container,
+    .users-table-container {
+        border: 2px solid #007bff;
+        position: relative;
+    }
+    
+    .flights-table-container::after,
+    .users-table-container::after {
+        content: '→';
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #007bff;
+        font-size: 1.5rem;
+        font-weight: bold;
+        animation: bounce 1s infinite;
+        pointer-events: none;
+    }
+    
+    @keyframes bounce {
+        0%, 100% { transform: translateY(-50%) translateX(0); }
+        50% { transform: translateY(-50%) translateX(5px); }
+    }
+    
+    .table-scroll-indicator {
+        display: block;
+    }
+}
